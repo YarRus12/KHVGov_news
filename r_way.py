@@ -11,6 +11,7 @@ from selenium.webdriver.common.by import By
 import time
 import functional
 from datetime import date
+import re
 
 """pip install -r requirements.txt"""
 
@@ -44,6 +45,7 @@ def page_open(url: str, headers: str,  iterations: int = 1):
             # Находим кнопку "Загрузить еще и нажимаем требуемое число итераций"
             try:
                 driver.find_element(By.ID, 'ajax_paginator_btn').click()
+                print("Нажата кнопка 'Загрузить еще' ")
                 # Ожидание прогрузки страницы
                 time.sleep(5)
             except: pass
@@ -71,51 +73,23 @@ def parse_pages(url: str, headers: str,  iterations: int) -> list:
     print(f"Обнаружено {len(Links)} ссылок")
     return list(set(Links))
 
-def separator(content: list):
-    """Функция отбирает из ссылок только те, которые содержат в себе новости"""
-    news_list = []
-    for line in content:
-        *args, id = line.split('/')
-        if id.isdigit():
-            news_list.append(line)
-    print(f'{len(news_list)} ссылок отобраны для включения в итоговый список')
-    return news_list
-
-def news_parser(link):
-    """Функция принимает в себя ссылку, извлекает id, ищет и преобразует дату, ищет заголовок и текст
-    и Возвращает кортеж из указанных значений"""
-    options = webdriver.ChromeOptions()
-    options.add_argument('headless')
-    driver = webdriver.Chrome(chrome_options=options)
-    driver.get(link)
-    try:
-        *args, id = link.split('/')
-        date = driver.find_element(By.CLASS_NAME, 'data-item').text
-        date_l = functional.change_date(date)
-        # заголовок ищется двумя методами
-        try:
-            head = driver.find_element(By.CSS_SELECTOR, 'body > div.main-wrapper > div.content.main.standart_shablons__news_detail > div > div > div.content-block > h1 > span').text
-        except:
-            try:
-                head = driver.find_element(By.XPATH, '/html/body/div[2]/div[3]/div/div/h1/text()').text
-            except: head = 'Заголовок не найден'
-        try:
-            #page_text = driver.find_element(BY.CLASS_NAME, 'content-text').text
-            page_text = driver.find_element(By.XPATH, '/html/body/div[2]/div[3]/div/div/div[2]/div[4]').text # Это самый нестабильный способ, но только он сработал
-        except: page_text = 'На странице не обнаружен текст'
-    except Exception as e: print(e)
-    print(f'Страница распарсена')
-    return id, date_l, head, page_text
+def parse_content(content: str):
+    """Функция принимает в себя контент достает ссылки"""
+    #регулярным выражением ищем все ссылки в html и собираем их по сайту
+    list_of_links = []
+    links = content.find_all(re.compile('\/events\/news\/[0-9]*')) # нужно сделать это выражение не жадным
+    print(links)
 
 
-today = f'{date.today()}'
+year,month,day = str(date.today()).split("-")
+today = f'{day}.{month}.{year}'
+print(f'Сегодня {today}')
+html_content = page_open(URL, headers, 3)
+today = '08.07.2022'
 
-links = parse_pages(URL, headers, 1) #один раз мы прокручиваем страницу для увеличения выборки сайта
-news_links = separator(links)
-result = [news_parser(link) for link in news_links[:10]] # Ограничимся ВЫБОРКОЙ В 10 СТРАНИЦ
+begin_index = html_content.find('date-splitter')
+end_index = html_content.find('date-splitter', begin_index+1)
+html_content = html_content[begin_index : end_index]
+print(parse_content(html_content))
 
-# Печатает с новой строки только те записи, в которых день совпадает с текущим днем
-for row in result:
-    if row[1]==today:
-        print(row)
 
