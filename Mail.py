@@ -82,7 +82,8 @@ def separator(content: list):
     return news_list
 
 def news_parser(link):
-    """Функция принимает в себя ссылку, извлекает id, ищет и преобразует дату, ищет заголовок и текст"""
+    """Функция принимает в себя ссылку, извлекает id, ищет и преобразует дату, ищет заголовок и текст
+    и Возвращает кортеж из указанных значений"""
     options = webdriver.ChromeOptions()
     options.add_argument('headless')
     driver = webdriver.Chrome(chrome_options=options)
